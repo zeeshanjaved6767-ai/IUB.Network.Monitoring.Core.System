@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "Device": {
+      "title": "Device",
+      "description": "A monitored network hardware device or server across campuses.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 64 },
+        "ipAddress": { "type": "string", "maxLength": 64 },
+        "macAddress": { "type": "string", "maxLength": 64 },
+        "campus": { "type": "string", "maxLength": 32 },
+        "building": { "type": "string", "maxLength": 128 },
+        "roomNo": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 32 },
+        "lastSeen": { "type": "string", "maxLength": 64 },
+        "uptime": { "type": "string", "maxLength": 64 },
+        "latencyMs": { "type": "number" },
+        "packetLoss": { "type": "number" },
+        "cpuUsage": { "type": "number" },
+        "memoryUsage": { "type": "number" },
+        "bandwidthInMbps": { "type": "number" },
+        "bandwidthOutMbps": { "type": "number" }
+      },
+      "required": ["id", "name", "ipAddress", "campus", "status"]
+    },
+    "MetricHistory": {
+      "title": "MetricHistory",
+      "description": "Historical time-series metric entry for latency, bandwidth, CPU, and packet loss.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "deviceId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "latencyMs": { "type": "number" },
+        "packetLoss": { "type": "number" },
+        "bandwidthInMbps": { "type": "number" },
+        "bandwidthOutMbps": { "type": "number" },
+        "cpuUsage": { "type": "number" },
+        "memoryUsage": { "type": "number" },
+        "status": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "deviceId", "timestamp", "latencyMs", "cpuUsage"]
+    },
+    "CollectorToken": {
+      "title": "CollectorToken",
+      "description": "Authorized collector credential token for agent metrics ingestion.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "campus": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "lastUsedAt": { "type": "string", "maxLength": 64 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "active"]
+    },
+    "AlertNotification": {
+      "title": "AlertNotification",
+      "description": "Network alert incident notification.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "deviceId": { "type": "string", "maxLength": 128 },
+        "deviceName": { "type": "string", "maxLength": 128 },
+        "campus": { "type": "string", "maxLength": 32 },
+        "building": { "type": "string", "maxLength": 128 },
+        "roomNo": { "type": "string", "maxLength": 64 },
+        "channel": { "type": "string", "maxLength": 32 },
+        "recipient": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 32 },
+        "message": { "type": "string", "maxLength": 512 },
+        "triggerReason": { "type": "string", "maxLength": 256 },
+        "resolved": { "type": "boolean" }
+      },
+      "required": ["id", "timestamp", "deviceId", "message", "status"]
+    },
+    "HardwareHealthLog": {
+      "title": "HardwareHealthLog",
+      "description": "Server-side hardware health log for rack temperature, fan speed, and power supply telemetry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "rackId": { "type": "string", "maxLength": 64 },
+        "campus": { "type": "string", "maxLength": 32 },
+        "building": { "type": "string", "maxLength": 128 },
+        "room": { "type": "string", "maxLength": 64 },
+        "temperatureC": { "type": "number" },
+        "temperatureStatus": { "type": "string", "maxLength": 32 },
+        "fanSpeedRpm": { "type": "number" },
+        "fanSpeedPercent": { "type": "number" },
+        "fanStatus": { "type": "string", "maxLength": 32 },
+        "powerSupplyHealth": { "type": "string", "maxLength": 64 },
+        "psu1Voltage": { "type": "number" },
+        "psu2Voltage": { "type": "number" },
+        "psuCurrentAmps": { "type": "number" },
+        "upsBatteryRuntimeMinutes": { "type": "number" },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "loggedBy": { "type": "string", "maxLength": 64 },
+        "details": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["id", "rackId", "campus", "temperatureC", "fanSpeedRpm", "powerSupplyHealth", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/devices/{deviceId}": {
+      "schema": "Device",
+      "description": "Network devices collection"
+    },
+    "/devices/{deviceId}/history/{historyId}": {
+      "schema": "MetricHistory",
+      "description": "Subcollection of historical telemetry metrics for a device"
+    },
+    "/collector_tokens/{tokenId}": {
+      "schema": "CollectorToken",
+      "description": "Registered collector agent tokens"
+    },
+    "/alerts/{alertId}": {
+      "schema": "AlertNotification",
+      "description": "Active and historical network incidents"
+    },
+    "/hardware_health_logs/{logId}": {
+      "schema": "HardwareHealthLog",
+      "description": "Server-side rack hardware health logs including temperature, fan speed, and power supply status"
+    }
+  }
+}

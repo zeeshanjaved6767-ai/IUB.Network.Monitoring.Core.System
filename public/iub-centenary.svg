@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rosetteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#FB923C"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="navyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+    <filter id="badgeShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Scalloped 16-Point Rosette Outer Edge -->
+  <path d="M 250 15
+           C 275 15, 290 32, 312 28
+           C 334 24, 345 44, 368 46
+           C 391 48, 396 70, 417 78
+           C 438 86, 436 109, 453 122
+           C 470 135, 461 159, 473 176
+           C 485 193, 471 216, 478 236
+           C 485 256, 467 277, 469 298
+           C 471 319, 450 336, 447 357
+           C 444 378, 421 390, 413 410
+           C 405 430, 381 437, 368 454
+           C 355 471, 331 471, 314 483
+           C 297 495, 274 487, 254 494
+           C 234 501, 214 489, 194 490
+           C 174 491, 157 475, 138 470
+           C 119 465, 107 446, 91 436
+           C 75 426, 68 404, 56 390
+           C 44 376, 43 353, 35 336
+           C 27 319, 32 296, 29 277
+           C 26 258, 37 238, 39 218
+           C 41 198, 33 176, 40 157
+           C 47 138, 62 122, 74 106
+           C 86 90, 89 67, 106 56
+           C 123 45, 143 51, 163 45
+           C 183 39, 199 21, 221 21
+           Z"
+        fill="url(#rosetteGrad)"
+        filter="url(#badgeShadow)"/>
+
+  <!-- Navy Blue Circular Ring -->
+  <circle cx="250" cy="250" r="215" fill="url(#navyGrad)"/>
+  <circle cx="250" cy="250" r="213" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+
+  <!-- Circular Text Paths -->
+  <defs>
+    <!-- Top Arc Path -->
+    <path id="topTextArc" d="M 75 250 A 175 175 0 1 1 425 250"/>
+    <!-- Bottom Arc Path -->
+    <path id="bottomTextArc" d="M 420 250 A 170 170 0 0 1 80 250"/>
+  </defs>
+
+  <!-- Top Text: The Islamia University of Bahawalpur -->
+  <text fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="25.5" font-weight="800" letter-spacing="2">
+    <textPath href="#topTextArc" startOffset="50%" text-anchor="middle">
+      The Islamia University of Bahawalpur
+    </textPath>
+  </text>
+
+  <!-- Flanking Stars on Navy Ring -->
+  <!-- Left Star -->
+  <polygon points="78,245 81,235 91,235 83,241 86,251 78,245 70,251 73,241 65,235 75,235" fill="#F59E0B"/>
+  <!-- Right Star -->
+  <polygon points="422,245 425,235 435,235 427,241 430,251 422,245 414,251 417,241 409,235 419,235" fill="#F59E0B"/>
+
+  <!-- Bottom Text: Jamia Abbasia -->
+  <text fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="900" letter-spacing="3.5">
+    <textPath href="#bottomTextArc" startOffset="50%" text-anchor="middle">
+      Jamia Abbasia
+    </textPath>
+  </text>
+
+  <!-- Inner White Disc -->
+  <circle cx="250" cy="250" r="148" fill="#FFFFFF"/>
+  <circle cx="250" cy="250" r="146" fill="none" stroke="#1E3A8A" stroke-width="2"/>
+
+  <!-- Inner Top Arabic Calligraphy: وَيَتَفَكَّرُوا & Decorative Stars -->
+  <g fill="#1E3A8A">
+    <!-- Mini Constellation Stars -->
+    <polygon points="175,150 177,145 182,145 178,148 180,153 175,150 170,153 172,148 168,145 173,145" transform="scale(0.8) translate(45,35)"/>
+    <polygon points="205,135 207,130 212,130 208,133 210,138 205,135 200,138 202,133 198,130 203,130" transform="scale(0.8) translate(50,30)"/>
+    <polygon points="325,135 327,130 332,130 328,133 330,138 325,135 320,138 322,133 318,130 323,130" transform="scale(0.8) translate(75,30)"/>
+    <polygon points="345,150 347,145 352,145 348,148 350,153 345,150 340,153 342,148 338,145 343,145" transform="scale(0.8) translate(80,35)"/>
+    
+    <!-- Stylized Arabic Calligraphy Text -->
+    <text x="250" y="172" 
+          font-family="'Noto Naskh Arabic', 'Scheherazade', serif" 
+          font-size="34" 
+          font-weight="bold" 
+          text-anchor="middle">
+      وَيَتَفَكَّرُوا
+    </text>
+  </g>
+
+  <!-- Big Bold Centenary "100" -->
+  <g fill="url(#cyanGrad)">
+    <text x="250" y="278" 
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Arial Black', sans-serif" 
+          font-size="124" 
+          font-weight="900" 
+          text-anchor="middle"
+          letter-spacing="-4">
+      100
+    </text>
+  </g>
+
+  <!-- Gold Ribbon Plaque: YEARS OF ACADEMIC EXCELLENCE -->
+  <rect x="135" y="295" width="230" height="26" rx="2" fill="#FBBF24" stroke="#D97706" stroke-width="1.5"/>
+  <text x="250" y="313" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+        font-size="11.5" 
+        font-weight="900" 
+        fill="#1E3A8A" 
+        text-anchor="middle" 
+        letter-spacing="0.5">
+    YEARS OF ACADEMIC EXCELLENCE
+  </text>
+
+  <!-- 1925 - 2025 Centenary Sub-Text -->
+  <text x="250" y="348" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace" 
+        font-size="23" 
+        font-weight="900" 
+        fill="#1E3A8A" 
+        text-anchor="middle" 
+        letter-spacing="1.5">
+    1925-2025
+  </text>
+</svg>
