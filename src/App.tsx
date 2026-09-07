@@ -22,6 +22,8 @@ import { ThemeModal } from './components/ThemeModal.tsx';
 import { CsvPdfImportModal } from './components/CsvPdfImportModal.tsx';
 import { PdfExportModal } from './components/PdfExportModal.tsx';
 import { AdminAuthModal } from './components/AdminAuthModal.tsx';
+import { ModularDashboard } from './components/ModularDashboard.tsx';
+import { PinWidgetModal } from './components/PinWidgetModal.tsx';
 import { useWebSocket } from './useWebSocket.ts';
 
 import { 
@@ -37,7 +39,10 @@ import {
   SystemEngineMetrics,
   ThemeConfig,
   AdminUser,
-  getUserRoleCategory
+  getUserRoleCategory,
+  DashboardWidget,
+  WidgetType,
+  DEFAULT_DASHBOARD_WIDGETS
 } from './types.ts';
 import { DEFAULT_THEME, applyThemeToDocument } from './themes.ts';
 
@@ -60,7 +65,10 @@ import {
   deleteAlertRule,
   toggleAlertRule,
   fetchSystemMetrics,
-  resetDatabase
+  resetDatabase,
+  fetchDashboardWidgets,
+  saveDashboardWidgets,
+  resetDashboardWidgets
 } from './api.ts';
 
 import { 
@@ -81,7 +89,8 @@ import {
   ShieldCheck,
   Lock,
   ChevronRight,
-  KeyRound
+  KeyRound,
+  Pin
 } from 'lucide-react';
 
 export default function App() {
@@ -145,6 +154,77 @@ export default function App() {
     };
   });
 
+  // Modular Dashboard Widgets State
+  const [widgets, setWidgets] = useState<DashboardWidget[]>(() => {
+    try {
+      const cached = localStorage.getItem('iub_dashboard_widgets_default');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return DEFAULT_DASHBOARD_WIDGETS;
+  });
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [pinModalInitialDeviceId, setPinModalInitialDeviceId] = useState<string | undefined>(undefined);
+  const [pinModalInitialType, setPinModalInitialType] = useState<WidgetType | undefined>(undefined);
+
+  const handleReorderWidgets = async (newWidgets: DashboardWidget[]) => {
+    setWidgets(newWidgets);
+    try {
+      await saveDashboardWidgets(newWidgets, currentUser?.id || 'default');
+    } catch (e) {
+      console.warn('Saved layout locally', e);
+    }
+  };
+
+  const handlePinWidget = async (newWidget: DashboardWidget) => {
+    const updated = [newWidget, ...widgets];
+    setWidgets(updated);
+    try {
+      await saveDashboardWidgets(updated, currentUser?.id || 'default');
+      showToast(`Pinned "${newWidget.title}" to landing page`, 'success');
+    } catch (e) {
+      showToast(`Pinned "${newWidget.title}" locally`, 'info');
+    }
+  };
+
+  const handleUnpinWidget = async (widgetId: string) => {
+    const target = widgets.find((w) => w.id === widgetId);
+    const updated = widgets.filter((w) => w.id !== widgetId);
+    setWidgets(updated);
+    try {
+      await saveDashboardWidgets(updated, currentUser?.id || 'default');
+      showToast(`Unpinned "${target?.title || 'Widget'}" from landing page`, 'info');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateWidget = async (updatedWidget: DashboardWidget) => {
+    const updated = widgets.map((w) => (w.id === updatedWidget.id ? updatedWidget : w));
+    setWidgets(updated);
+    try {
+      await saveDashboardWidgets(updated, currentUser?.id || 'default');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleResetWidgets = async () => {
+    try {
+      const reset = await resetDashboardWidgets(currentUser?.id || 'default');
+      setWidgets(reset);
+      showToast('Dashboard widgets reset to default layout', 'success');
+    } catch (e) {
+      setWidgets(DEFAULT_DASHBOARD_WIDGETS);
+      showToast('Dashboard widgets reset to default layout', 'success');
+    }
+  };
+
+  const handleOpenPinModal = (type: WidgetType = 'device_metric', deviceId?: string) => {
+    setPinModalInitialType(type);
+    setPinModalInitialDeviceId(deviceId);
+    setIsPinModalOpen(true);
+  };
+
   const handleOpenChatWithQuery = (prompt: string) => {
     setChatbotInitialPrompt(prompt);
     setIsChatbotOpen(true);
@@ -190,6 +270,7 @@ export default function App() {
         alertsRes,
         rulesRes,
         metricsRes,
+        widgetsRes,
       ] = await Promise.allSettled([
         fetchCampuses(),
         fetchDevices(),
@@ -198,6 +279,7 @@ export default function App() {
         fetchAlerts(),
         fetchAlertRules(),
         fetchSystemMetrics(),
+        fetchDashboardWidgets(currentUser?.id || 'default'),
       ]);
 
       if (campusesRes.status === 'fulfilled' && Array.isArray(campusesRes.value) && campusesRes.value.length > 0) {
@@ -228,6 +310,9 @@ export default function App() {
       }
       if (metricsRes.status === 'fulfilled' && metricsRes.value) {
         setMetrics(metricsRes.value);
+      }
+      if (widgetsRes.status === 'fulfilled' && Array.isArray(widgetsRes.value) && widgetsRes.value.length > 0) {
+        setWidgets(widgetsRes.value);
       }
     } catch (err) {
       console.warn('Network sync notice:', err);
@@ -641,6 +726,23 @@ export default function App() {
               }}
             />
 
+            {/* Modular Drag-and-Drop Personalized Dashboard System */}
+            <ModularDashboard
+              widgets={widgets}
+              devices={devices}
+              campuses={campuses}
+              securityEvents={securityEvents}
+              onReorderWidgets={handleReorderWidgets}
+              onUnpinWidget={handleUnpinWidget}
+              onUpdateWidget={handleUpdateWidget}
+              onOpenPinModal={(type, devId) => handleOpenPinModal(type, devId)}
+              onOpenDiagnostics={(dev) => setDiagnosticDevice(dev)}
+              onTogglePower={handleTogglePower}
+              onOpenChatWithQuery={handleOpenChatWithQuery}
+              currentUser={currentUser}
+              onResetWidgets={handleResetWidgets}
+            />
+
             {/* Device Grid Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-4">
               <div>
@@ -704,6 +806,8 @@ export default function App() {
                     onDelete={handleDeleteDevice}
                     onOpenDiagnostics={(d) => setDiagnosticDevice(d)}
                     onViewHistory={(d) => setHistoryDevice(d)}
+                    onPin={(d) => handleOpenPinModal('device_metric', d.id)}
+                    isPinned={widgets.some((w) => w.deviceId === device.id)}
                   />
                 ))}
               </div>
@@ -837,6 +941,7 @@ export default function App() {
           <SecurityCenter
             events={securityEvents}
             onTriggerSimulatedAttack={handleTriggerSimulatedAttack}
+            onPinSecurityWidget={() => handleOpenPinModal('security_log')}
           />
         )}
 
@@ -912,9 +1017,16 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            {/* Footer Left Logo: Official Crest with standard white background & fixed size */}
-            <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-lg bg-white flex items-center justify-center p-1 shadow-md border border-gray-200" title="The Islamia University of Bahawalpur - Official Crest">
-              <img src="/iub-crest.svg" alt="IUB Official Crest" className="w-full h-full object-contain" />
+            {/* Footer Left Logo: Official IUB Logo (48px x 48px HD) */}
+            <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-white flex items-center justify-center p-1 shadow-md border border-gray-200 hover:border-blue-500 transition-all" title="The Islamia University of Bahawalpur - Official Logo">
+              <img 
+                src="/iub-crest.svg" 
+                alt="The Islamia University of Bahawalpur - Official Logo" 
+                className="w-full h-full object-contain" 
+                width={48}
+                height={48}
+                referrerPolicy="no-referrer"
+              />
             </div>
 
             <div>
@@ -951,9 +1063,16 @@ export default function App() {
               <span>Reset Database</span>
             </button>
 
-            {/* Footer Right Logo: 100 Years Centenary with standard white background & fixed size */}
-            <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-lg bg-white flex items-center justify-center p-0.5 shadow-md border border-gray-200" title="100 Years of Academic Excellence (1925-2025) - Jamia Abbasia">
-              <img src="/iub-centenary.svg" alt="Jamia Abbasia 100 Years Centenary" className="w-full h-full object-contain" />
+            {/* Footer Right Logo: 100 Years Centenary Logo (48px x 48px HD) with exact same design */}
+            <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-white flex items-center justify-center p-1 shadow-md border border-gray-200 hover:border-blue-500 transition-all" title="100 Years of Academic Excellence (1925-2025) - Jamia Abbasia">
+              <img 
+                src="/iub-centenary.svg" 
+                alt="100 Years of Academic Excellence (1925-2025) Jamia Abbasia Logo" 
+                className="w-full h-full object-contain" 
+                width={48}
+                height={48}
+                referrerPolicy="no-referrer"
+              />
             </div>
           </div>
         </div>
@@ -1072,6 +1191,22 @@ export default function App() {
           } catch {}
           showToast(`Authenticated successfully as ${user.fullName} (${user.roleTitle})`, 'success');
         }}
+      />
+
+      {/* Modular Dashboard Pin Widget Modal */}
+      <PinWidgetModal
+        isOpen={isPinModalOpen}
+        onClose={() => {
+          setIsPinModalOpen(false);
+          setPinModalInitialDeviceId(undefined);
+          setPinModalInitialType(undefined);
+        }}
+        devices={devices}
+        campuses={campuses}
+        securityEvents={securityEvents}
+        onPinWidget={handlePinWidget}
+        initialDeviceId={pinModalInitialDeviceId}
+        initialWidgetType={pinModalInitialType}
       />
 
     </div>

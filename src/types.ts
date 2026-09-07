@@ -288,3 +288,95 @@ export interface CsvParsedRow {
   errors: string[];
   warnings: string[];
 }
+
+export type WidgetType = 
+  | 'device_metric'       // Specific device metrics (CPU, RAM, Latency, Bandwidth, Ports, Uptime)
+  | 'security_log'        // Specific security event / live threat stream
+  | 'security_radar'      // High-severity Suricata/Wazuh alert counter & threat posture
+  | 'campus_telemetry'    // Specific campus health & latency gauge
+  | 'network_latency'     // Multi-campus latency comparison & jitter sparkline
+  | 'power_status'        // Critical core switches & UPS/power state
+  | 'soc_attacker_map';   // Blocked attacker IP feed & autonomous mitigation
+
+export type WidgetWidth = '1' | '2' | '3' | 'full';
+
+export interface DashboardWidget {
+  id: string;
+  type: WidgetType;
+  title: string;
+  subtitle?: string;
+  deviceId?: string;          // Target device if widget is device_metric or power_status
+  metricCategory?: 'all' | 'cpu_ram' | 'latency' | 'bandwidth' | 'ports' | 'power';
+  securityFilter?: 'all' | 'critical' | 'suricata' | 'wazuh';
+  campusId?: CampusId | 'ALL';
+  width: WidgetWidth;         // 1: 1 col, 2: 2 cols, 3: 3 cols, full: full width
+  pinnedAt: string;
+  colorTheme?: 'emerald' | 'blue' | 'purple' | 'amber' | 'rose' | 'cyan';
+  customNotes?: string;
+  refreshIntervalSec?: number;
+}
+
+export const DEFAULT_DASHBOARD_WIDGETS: DashboardWidget[] = [
+  {
+    id: 'widget-bjc-core-01',
+    type: 'device_metric',
+    title: 'BJC Core Router 01 — Live Telemetry',
+    subtitle: 'Baghdad-ul-Jadeed Backbone Cisco ASR-9006',
+    deviceId: 'DEV-BJC-R01',
+    metricCategory: 'all',
+    width: '2',
+    pinnedAt: new Date().toISOString(),
+    colorTheme: 'blue',
+  },
+  {
+    id: 'widget-soc-threat-stream',
+    type: 'security_log',
+    title: 'SOC Live Threat Stream (Suricata & Wazuh)',
+    subtitle: 'Real-time DPI Intrusion Prevention & Autonomous Mitigations',
+    securityFilter: 'all',
+    width: '2',
+    pinnedAt: new Date().toISOString(),
+    colorTheme: 'rose',
+  },
+  {
+    id: 'widget-bjc-datacenter-sw',
+    type: 'device_metric',
+    title: 'Baghdad Data Center Core Switch',
+    subtitle: 'HPE FlexFabric 5900 (High-Density Aggregation)',
+    deviceId: 'DEV-BJC-SW01',
+    metricCategory: 'latency',
+    width: '1',
+    pinnedAt: new Date().toISOString(),
+    colorTheme: 'emerald',
+  },
+  {
+    id: 'widget-threat-radar',
+    type: 'security_radar',
+    title: 'Campus Threat Defense Radar',
+    subtitle: 'Autonomous BGP Blackholing & IPS Dropped Packets',
+    width: '1',
+    pinnedAt: new Date().toISOString(),
+    colorTheme: 'purple',
+  },
+  {
+    id: 'widget-ryk-gateway',
+    type: 'device_metric',
+    title: 'RYK Sub-Campus Border Gateway',
+    subtitle: 'MikroTik CCR1036 Cloud Core Gateway',
+    deviceId: 'DEV-RYK-R01',
+    metricCategory: 'bandwidth',
+    width: '1',
+    pinnedAt: new Date().toISOString(),
+    colorTheme: 'cyan',
+  },
+  {
+    id: 'widget-latency-matrix',
+    type: 'network_latency',
+    title: 'Multi-Campus Backbone Latency Matrix',
+    subtitle: 'Real-time ICMP ping times across all 6 campus sites',
+    width: '1',
+    pinnedAt: new Date().toISOString(),
+    colorTheme: 'amber',
+  },
+];
+

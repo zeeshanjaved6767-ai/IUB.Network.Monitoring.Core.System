@@ -13,7 +13,8 @@ import {
   Trash2, 
   MapPin, 
   Network,
-  Activity
+  Activity,
+  Pin
 } from 'lucide-react';
 import { Device } from '../types.ts';
 
@@ -24,6 +25,8 @@ interface DeviceCardProps {
   onEdit: (device: Device) => void;
   onDelete: (id: string) => void;
   onViewHistory?: (device: Device) => void;
+  onPin?: (device: Device) => void;
+  isPinned?: boolean;
 }
 
 export const DeviceCard: React.FC<DeviceCardProps> = ({
@@ -33,6 +36,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   onEdit,
   onDelete,
   onViewHistory,
+  onPin,
+  isPinned,
 }) => {
   const getDeviceIcon = () => {
     switch (device.type) {
@@ -90,11 +95,26 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
           </div>
 
           <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0A0B0E] border border-[#2D3139]">
-              <div className={`dot ${isOffline ? 'offline' : isWarning ? 'warning' : 'online'}`}></div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-300">
-                {device.status}
-              </span>
+            <div className="flex items-center gap-1.5">
+              {onPin && (
+                <button
+                  onClick={() => onPin(device)}
+                  className={`p-1 rounded border transition cursor-pointer ${
+                    isPinned
+                      ? 'bg-blue-600/30 border-blue-500 text-blue-400'
+                      : 'bg-[#0A0B0E] border-[#2D3139] text-gray-400 hover:text-white hover:border-blue-500/50'
+                  }`}
+                  title={isPinned ? 'Metric is pinned to Landing Page (Click to manage)' : 'Pin Live Metrics to Landing Page'}
+                >
+                  <Pin className="w-3 h-3" />
+                </button>
+              )}
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0A0B0E] border border-[#2D3139]">
+                <div className={`dot ${isOffline ? 'offline' : isWarning ? 'warning' : 'online'}`}></div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-300">
+                  {device.status}
+                </span>
+              </div>
             </div>
             <span className="campus-tag">
               {device.campus}
@@ -241,6 +261,21 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         </div>
 
         <div className="flex items-center space-x-1">
+          {onPin && (
+            <button
+              id={`pin-btn-${device.id}`}
+              onClick={() => onPin(device)}
+              className={`p-1.5 rounded border transition cursor-pointer ${
+                isPinned
+                  ? 'bg-blue-600/20 border-blue-500 text-blue-400'
+                  : 'bg-[#0A0B0E] border-[#2D3139] text-gray-400 hover:text-cyan-300 hover:bg-[#1E2229]'
+              }`}
+              title={isPinned ? 'Widget is pinned to Landing Page' : 'Pin to Modular Dashboard'}
+            >
+              <Pin className="w-3 h-3" />
+            </button>
+          )}
+
           <button
             id={`edit-btn-${device.id}`}
             onClick={() => onEdit(device)}

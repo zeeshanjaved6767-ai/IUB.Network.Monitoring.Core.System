@@ -1,4 +1,15 @@
-import { Device, FiberLink, SecurityEvent, AlertNotification, AlertRule, SystemEngineMetrics, CampusInfo, HistoricalMetricPoint, CollectorToken } from './types.ts';
+import { 
+  Device, 
+  FiberLink, 
+  SecurityEvent, 
+  AlertNotification, 
+  AlertRule, 
+  SystemEngineMetrics, 
+  CampusInfo, 
+  HistoricalMetricPoint, 
+  CollectorToken,
+  DashboardWidget
+} from './types.ts';
 
 /**
  * Resilient JSON fetcher with automatic exponential backoff retry
@@ -557,5 +568,56 @@ export async function fetchCurrentAdminUser(): Promise<any> {
   const res = await fetch('/api/auth/me');
   if (!res.ok) throw new Error('Failed to fetch admin profile');
   return res.json();
+}
+
+// --- Dashboard Widgets API ---
+export async function fetchDashboardWidgets(userId: string = 'default'): Promise<DashboardWidget[]> {
+  try {
+    return await fetchJsonWithRetry<DashboardWidget[]>(`/api/dashboard/widgets?userId=${encodeURIComponent(userId)}`);
+  } catch (err) {
+    console.warn('Falling back to local cached widgets:', err);
+    try {
+      const cached = localStorage.getItem(`iub_dashboard_widgets_${userId}`);
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  }
+}
+
+export async function saveDashboardWidgets(widgets: DashboardWidget[], userId: string = 'default'): Promise<DashboardWidget[]> {
+  try {
+    localStorage.setItem(`iub_dashboard_widgets_${userId}`, JSON.stringify(widgets));
+    const res = await fetch('/api/dashboard/widgets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ widgets, userId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to save dashboard widgets');
+    }
+    const data = await res.json();
+    return data.widgets || widgets;
+  } catch (err) {
+    console.warn('Saved widgets locally only (server offline):', err);
+    return widgets;
+  }
+}
+
+export async function resetDashboardWidgets(userId: string = 'default'): Promise<DashboardWidget[]> {
+  try {
+    const res = await fetch('/api/dashboard/widgets/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    if (!res.ok) throw new Error('Failed to reset dashboard widgets');
+    const data = await res.json();
+    localStorage.setItem(`iub_dashboard_widgets_${userId}`, JSON.stringify(data.widgets));
+    return data.widgets;
+  } catch (err) {
+    console.error('Reset error:', err);
+    throw err;
+  }
 }
 

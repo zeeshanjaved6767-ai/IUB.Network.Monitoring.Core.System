@@ -4,18 +4,21 @@ import {
   Flame, 
   Terminal, 
   Lock, 
-  Zap
+  Zap,
+  Pin
 } from 'lucide-react';
 import { SecurityEvent } from '../types.ts';
 
 interface SecurityCenterProps {
   events: SecurityEvent[];
   onTriggerSimulatedAttack: (type: string) => Promise<void>;
+  onPinSecurityWidget?: (filter?: string) => void;
 }
 
 export const SecurityCenter: React.FC<SecurityCenterProps> = ({
   events,
   onTriggerSimulatedAttack,
+  onPinSecurityWidget,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [filterSource, setFilterSource] = useState<'ALL' | 'Suricata-IDS' | 'Wazuh-SIEM'>('ALL');
@@ -89,8 +92,19 @@ export const SecurityCenter: React.FC<SecurityCenterProps> = ({
             </p>
           </div>
 
-          {/* Simulate attack buttons */}
-          <div className="flex items-center space-x-2">
+          {/* Simulate attack buttons & Pin button */}
+          <div className="flex items-center flex-wrap gap-2">
+            {onPinSecurityWidget && (
+              <button
+                onClick={() => onPinSecurityWidget('all')}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-xs font-semibold border border-blue-500/40 transition cursor-pointer"
+                title="Pin Live Security Threat Stream to Landing Page"
+              >
+                <Pin className="w-3.5 h-3.5" />
+                <span>Pin to Landing Page</span>
+              </button>
+            )}
+
             <button
               onClick={() => handleSimulate('DDoS SYN Flood')}
               disabled={isSimulating}

@@ -498,9 +498,9 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
                 style={{ backgroundColor: tempTheme.headerBg }}
               >
                 <div className="flex items-center space-x-2">
-                  {/* Standard White Background Logo */}
-                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-0.5 shadow-sm border border-gray-200">
-                    <img src="/iub-crest.svg" alt="IUB Crest" className="w-full h-full object-contain" />
+                  {/* Left Logo: IUB Crest with same design */}
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-0.5 shadow-sm border border-gray-200">
+                    <img src="/iub-crest.svg" alt="IUB Crest" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-white leading-tight">
@@ -516,9 +516,9 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white" style={{ backgroundColor: tempTheme.accentColor || '#3B82F6' }}>
                     + Device
                   </span>
-                  {/* Right Centenary Logo with white background */}
-                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center p-0.5 shadow-sm border border-gray-200">
-                    <img src="/iub-centenary.svg" alt="Centenary" className="w-full h-full object-contain" />
+                  {/* Right Centenary Logo with exact same design */}
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center p-0.5 shadow-sm border border-gray-200">
+                    <img src="/iub-centenary.svg" alt="100 Years Centenary" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </div>
                 </div>
               </div>

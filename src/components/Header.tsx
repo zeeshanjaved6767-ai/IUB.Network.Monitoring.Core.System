@@ -101,10 +101,17 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* Brand & Author Identity */}
           <div className="flex items-center space-x-3.5">
-            {/* Left Logo: Authentic IUB Crest Logo with standard white background & fixed size */}
-            <div className="relative group cursor-pointer" title="The Islamia University of Bahawalpur - Official University Crest">
-              <div className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl bg-white flex items-center justify-center p-1.5 shadow-md border border-gray-200 group-hover:border-blue-500 transition">
-                <img src="/iub-crest.svg" alt="IUB Official Crest" className="w-full h-full object-contain" />
+            {/* Left Logo: Authentic IUB Logo (48px x 48px HD) */}
+            <div className="relative group cursor-pointer" title="The Islamia University of Bahawalpur - Official University Logo">
+              <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-white flex items-center justify-center p-1 shadow-md border border-gray-200 group-hover:border-blue-500 transition-all transform group-hover:scale-105">
+                <img 
+                  src="/iub-crest.svg" 
+                  alt="The Islamia University of Bahawalpur - Official Logo" 
+                  className="w-full h-full object-contain" 
+                  width={48}
+                  height={48}
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center" title="NOC Core Operational"></span>
             </div>
@@ -279,10 +286,17 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Add Device</span>
             </button>
 
-            {/* Right Logo: 100 Years Jamia Abbasia Centenary Logo with standard white background & fixed size */}
+            {/* Right Logo: 100 Years Jamia Abbasia Centenary Logo (48px x 48px HD) with exact same design */}
             <div className="flex items-center pl-2 sm:pl-3 border-l border-white/15 cursor-pointer group" title="100 Years of Academic Excellence (1925-2025) - Jamia Abbasia, The Islamia University of Bahawalpur">
-              <div className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl bg-white flex items-center justify-center p-1 shadow-md border border-gray-200 group-hover:border-amber-500 transition-all transform group-hover:scale-105">
-                <img src="/iub-centenary.svg" alt="Jamia Abbasia 100 Years Centenary" className="w-full h-full object-contain" />
+              <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-xl bg-white flex items-center justify-center p-1 shadow-md border border-gray-200 group-hover:border-blue-500 transition-all transform group-hover:scale-105">
+                <img 
+                  src="/iub-centenary.svg" 
+                  alt="100 Years of Academic Excellence (1925-2025) Jamia Abbasia Logo" 
+                  className="w-full h-full object-contain" 
+                  width={48}
+                  height={48}
+                  referrerPolicy="no-referrer"
+                />
               </div>
             </div>
           </div>

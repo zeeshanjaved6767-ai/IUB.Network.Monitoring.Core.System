@@ -567,6 +567,43 @@ async function startServer() {
     }
   });
 
+  // --- Personalized Modular Dashboard Widgets ---
+  app.get('/api/dashboard/widgets', (req, res) => {
+    try {
+      const userId = (req.query.userId as string) || 'default';
+      const widgets = db.getDashboardWidgets(userId);
+      res.json(widgets);
+    } catch (err: any) {
+      console.error('Error fetching dashboard widgets:', err);
+      res.status(500).json({ error: 'Failed to fetch dashboard widgets' });
+    }
+  });
+
+  app.post('/api/dashboard/widgets', (req, res) => {
+    try {
+      const { widgets, userId = 'default' } = req.body;
+      if (!Array.isArray(widgets)) {
+        return res.status(400).json({ error: 'widgets must be an array' });
+      }
+      const saved = db.saveDashboardWidgets(widgets, userId);
+      res.json({ success: true, widgets: saved });
+    } catch (err: any) {
+      console.error('Error saving dashboard widgets:', err);
+      res.status(500).json({ error: 'Failed to save dashboard widgets' });
+    }
+  });
+
+  app.post('/api/dashboard/widgets/reset', (req, res) => {
+    try {
+      const { userId = 'default' } = req.body;
+      const reset = db.resetDashboardWidgets(userId);
+      res.json({ success: true, widgets: reset });
+    } catch (err: any) {
+      console.error('Error resetting dashboard widgets:', err);
+      res.status(500).json({ error: 'Failed to reset dashboard widgets' });
+    }
+  });
+
   app.put('/api/devices/:id', (req, res) => {
     const prevDev = db.getDeviceById(req.params.id);
     const updated = db.updateDevice(req.params.id, req.body);

@@ -1,6 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import { Device, DeviceType, DeviceStatus, CampusId, FiberLink, SecurityEvent, AlertNotification, AlertRule, SystemEngineMetrics, CampusInfo, HistoricalMetricPoint } from '../src/types.ts';
+import { 
+  Device, 
+  DeviceType, 
+  DeviceStatus, 
+  CampusId, 
+  FiberLink, 
+  SecurityEvent, 
+  AlertNotification, 
+  AlertRule, 
+  SystemEngineMetrics, 
+  CampusInfo, 
+  HistoricalMetricPoint,
+  DashboardWidget,
+  DEFAULT_DASHBOARD_WIDGETS
+} from '../src/types.ts';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'iub_network_db.json');
@@ -1062,6 +1076,7 @@ interface DatabaseSchema {
   systemMetrics: SystemEngineMetrics;
   metricHistory?: Record<string, HistoricalMetricPoint[]>;
   users?: AdminUserAccount[];
+  dashboardWidgets?: Record<string, DashboardWidget[]>;
 }
 
 class NetworkDatabase {
@@ -1728,6 +1743,34 @@ class NetworkDatabase {
       return user;
     }
     return null;
+  }
+
+  public getDashboardWidgets(userId: string = 'default'): DashboardWidget[] {
+    if (!this.data.dashboardWidgets) {
+      this.data.dashboardWidgets = {};
+    }
+    if (!this.data.dashboardWidgets[userId] || this.data.dashboardWidgets[userId].length === 0) {
+      this.data.dashboardWidgets[userId] = [...DEFAULT_DASHBOARD_WIDGETS];
+    }
+    return this.data.dashboardWidgets[userId];
+  }
+
+  public saveDashboardWidgets(widgets: DashboardWidget[], userId: string = 'default'): DashboardWidget[] {
+    if (!this.data.dashboardWidgets) {
+      this.data.dashboardWidgets = {};
+    }
+    this.data.dashboardWidgets[userId] = widgets;
+    this.saveDatabase(this.data);
+    return this.data.dashboardWidgets[userId];
+  }
+
+  public resetDashboardWidgets(userId: string = 'default'): DashboardWidget[] {
+    if (!this.data.dashboardWidgets) {
+      this.data.dashboardWidgets = {};
+    }
+    this.data.dashboardWidgets[userId] = [...DEFAULT_DASHBOARD_WIDGETS];
+    this.saveDatabase(this.data);
+    return this.data.dashboardWidgets[userId];
   }
 
   public resetToDefaults() {
