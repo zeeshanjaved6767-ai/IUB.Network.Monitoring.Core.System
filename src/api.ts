@@ -370,3 +370,192 @@ export async function recordHardwareLog(log: any): Promise<any> {
   return res.json();
 }
 
+export async function createDevicesBulk(devices: Array<Partial<Device>>): Promise<{
+  success: boolean;
+  message: string;
+  count: number;
+  devices: Device[];
+}> {
+  if (!devices || devices.length === 0) {
+    return { success: true, message: 'No devices to import', count: 0, devices: [] };
+  }
+
+  // Chunk devices into batches of 100 to prevent payload timeout or size rejection
+  const CHUNK_SIZE = 100;
+  let totalAdded: Device[] = [];
+
+  for (let i = 0; i < devices.length; i += CHUNK_SIZE) {
+    const chunk = devices.slice(i, i + CHUNK_SIZE);
+    const res = await fetch('/api/devices/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ devices: chunk }),
+    });
+
+    if (!res.ok) {
+      let errorMsg = `Server error (${res.status})`;
+      try {
+        const errJson = await res.json();
+        if (errJson.error) errorMsg = errJson.error;
+      } catch {
+        const text = await res.text().catch(() => '');
+        if (text) errorMsg = text.slice(0, 150);
+      }
+      throw new Error(`Bulk device provisioning failed: ${errorMsg}`);
+    }
+
+    const data = await res.json();
+    if (data.devices && Array.isArray(data.devices)) {
+      totalAdded = totalAdded.concat(data.devices);
+    }
+  }
+
+  return {
+    success: true,
+    message: `Successfully provisioned ${totalAdded.length} equipment in IUB database.`,
+    count: totalAdded.length,
+    devices: totalAdded,
+  };
+}
+
+export async function loginAdmin(credentials: { email: string; password: string }): Promise<{
+  success: boolean;
+  message: string;
+  user: any;
+  token: string;
+}> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function signupAdmin(userData: any): Promise<{
+  success: boolean;
+  message: string;
+  user: any;
+  token: string;
+}> {
+  const res = await fetch('/api/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Sign up failed');
+  }
+  return res.json();
+}
+
+export async function request2FaOtp(payload: {
+  purpose: 'login' | 'signup';
+  email: string;
+  password?: string;
+  fullName?: string;
+  role?: string;
+  department?: string;
+  campusAccess?: string;
+  phoneNumber?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  email: string;
+  purpose: string;
+  simulatedOtp: string;
+  expiresAt: number;
+}> {
+  const res = await fetch('/api/auth/request-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to request verification code');
+  }
+  return res.json();
+}
+
+export async function verify2FaOtp(payload: {
+  email: string;
+  otp: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  user: any;
+  token: string;
+}> {
+  const res = await fetch('/api/auth/verify-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Verification code failed');
+  }
+  return res.json();
+}
+
+export async function resend2FaOtp(email: string): Promise<{
+  success: boolean;
+  message: string;
+  email: string;
+  simulatedOtp: string;
+  expiresAt: number;
+}> {
+  const res = await fetch('/api/auth/resend-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to resend code');
+  }
+  return res.json();
+}
+
+export async function fetchAdminUsers(): Promise<any[]> {
+  const res = await fetch('/api/auth/users');
+  if (!res.ok) throw new Error('Failed to fetch user directory');
+  return res.json();
+}
+
+export async function updateUserRole(userId: string, role: string, roleTitle?: string): Promise<any> {
+  const res = await fetch(`/api/auth/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, roleTitle }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update user role');
+  }
+  return res.json();
+}
+
+export async function deleteAdminUser(userId: string): Promise<any> {
+  const res = await fetch(`/api/auth/users/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete user account');
+  }
+  return res.json();
+}
+
+export async function fetchCurrentAdminUser(): Promise<any> {
+  const res = await fetch('/api/auth/me');
+  if (!res.ok) throw new Error('Failed to fetch admin profile');
+  return res.json();
+}
+

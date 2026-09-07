@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Device, FiberLink, SecurityEvent, AlertNotification, AlertRule, SystemEngineMetrics, CampusInfo, HistoricalMetricPoint } from '../src/types.ts';
+import { Device, DeviceType, DeviceStatus, CampusId, FiberLink, SecurityEvent, AlertNotification, AlertRule, SystemEngineMetrics, CampusInfo, HistoricalMetricPoint } from '../src/types.ts';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'iub_network_db.json');
@@ -978,6 +978,81 @@ const initialAlertRules: AlertRule[] = [
   },
 ];
 
+export interface AdminUserAccount {
+  id: string;
+  fullName: string;
+  email: string;
+  passwordHash: string;
+  role: 'Admin' | 'Manager' | 'User' | 'ai_lead' | 'super_admin' | 'noc_manager' | 'campus_engineer';
+  roleTitle: string;
+  department: string;
+  campusAccess: CampusId | 'ALL';
+  phoneNumber?: string;
+  avatarUrl?: string;
+  createdAt: string;
+  lastLogin?: string;
+  twoFactorVerified?: boolean;
+}
+
+const initialAdminUsers: AdminUserAccount[] = [
+  {
+    id: 'ADMIN-ZEESHAN-01',
+    fullName: 'Mr. Zeeshan Javed',
+    email: 'zeejaved766@gmail.com',
+    passwordHash: 'Admin@IUB2026',
+    role: 'Admin',
+    roleTitle: 'AI Lead Engineer & NOC System Architect',
+    department: 'Directorate of Information Technology (DIT)',
+    campusAccess: 'ALL',
+    phoneNumber: '+92 300 1234567',
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    twoFactorVerified: true,
+  },
+  {
+    id: 'ADMIN-IUB-02',
+    fullName: 'IUB Network Administrator',
+    email: 'admin@iub.edu.pk',
+    passwordHash: 'IUBnetwork@123',
+    role: 'Admin',
+    roleTitle: 'Chief Network Operations Super Admin',
+    department: 'DIT Network Infrastructure Wing',
+    campusAccess: 'ALL',
+    phoneNumber: '+92 62 9250235',
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    twoFactorVerified: true,
+  },
+  {
+    id: 'MGR-SARAH-03',
+    fullName: 'Engr. Sarah Tariq',
+    email: 'sarah.manager@iub.edu.pk',
+    passwordHash: 'Manager@2026',
+    role: 'Manager',
+    roleTitle: 'NOC Operations Manager',
+    department: 'DIT Network Operations Center',
+    campusAccess: 'BJC',
+    phoneNumber: '+92 301 9876543',
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    twoFactorVerified: true,
+  },
+  {
+    id: 'USR-ALI-04',
+    fullName: 'Ali Raza',
+    email: 'ali.user@iub.edu.pk',
+    passwordHash: 'User@2026',
+    role: 'User',
+    roleTitle: 'Campus Network Viewer & Staff',
+    department: 'Department of Computer Science & IT',
+    campusAccess: 'ALL',
+    phoneNumber: '+92 333 4567890',
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    twoFactorVerified: true,
+  }
+];
+
 interface DatabaseSchema {
   devices: Device[];
   fiberLinks: FiberLink[];
@@ -986,6 +1061,7 @@ interface DatabaseSchema {
   alertRules: AlertRule[];
   systemMetrics: SystemEngineMetrics;
   metricHistory?: Record<string, HistoricalMetricPoint[]>;
+  users?: AdminUserAccount[];
 }
 
 class NetworkDatabase {
@@ -1044,6 +1120,9 @@ class NetworkDatabase {
         if (!parsed.metricHistory || typeof parsed.metricHistory !== 'object') {
           parsed.metricHistory = this.generateInitialMetricHistory(parsed.devices || initialDevices);
         }
+        if (!parsed.users || !Array.isArray(parsed.users) || parsed.users.length === 0) {
+          parsed.users = initialAdminUsers;
+        }
         return parsed;
       }
     } catch (err) {
@@ -1070,6 +1149,7 @@ class NetworkDatabase {
         lastSheetsSync: new Date().toISOString(),
       },
       metricHistory: this.generateInitialMetricHistory(initialDevices),
+      users: initialAdminUsers,
     };
 
     this.saveDatabase(defaultData);
@@ -1139,6 +1219,72 @@ class NetworkDatabase {
     this.data.devices.unshift(device);
     this.saveDatabase(this.data);
     return device;
+  }
+
+  public addDevicesBulk(newDevs: Array<Partial<Device>>): Device[] {
+    const addedDevices: Device[] = [];
+    const nowIso = new Date().toISOString();
+
+    for (const dev of newDevs) {
+      if (!dev.name && !dev.ipAddress) continue;
+      const campus = (dev.campus as CampusId) || 'BJC';
+      const id = dev.id || `DEV-${campus}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const status: DeviceStatus = dev.status === 'offline' ? 'offline' : (dev.status || 'online');
+
+      const newDevice: Device = {
+        id,
+        name: dev.name || `Equipment-${id}`,
+        type: (dev.type as DeviceType) || 'switch',
+        model: dev.model || 'Standard Enterprise Model',
+        ipAddress: dev.ipAddress || `10.10.${Math.floor(Math.random() * 150)}.${Math.floor(Math.random() * 250 + 1)}`,
+        macAddress: dev.macAddress || `52:54:00:${Math.random().toString(16).substring(2, 4).toUpperCase()}:${Math.random().toString(16).substring(2, 4).toUpperCase()}:${Math.random().toString(16).substring(2, 4).toUpperCase()}`,
+        campus,
+        building: dev.building || 'Main Campus Block',
+        roomNo: dev.roomNo || 'Room 101',
+        rackId: dev.rackId || 'RACK-01',
+        portsTotal: dev.portsTotal || 24,
+        portsActive: dev.portsActive || 12,
+        status,
+        lastSeen: nowIso,
+        uptime: status === 'offline' ? '0d 00h 00m' : (dev.uptime || '12d 04h 20m'),
+        latencyMs: status === 'offline' ? 999 : (dev.latencyMs ?? 1.2),
+        packetLoss: status === 'offline' ? 100 : (dev.packetLoss ?? 0),
+        cpuUsage: dev.cpuUsage ?? 22,
+        memoryUsage: dev.memoryUsage ?? 34,
+        temperatureC: dev.temperatureC ?? 32,
+        bandwidthInMbps: dev.bandwidthInMbps ?? 120,
+        bandwidthOutMbps: dev.bandwidthOutMbps ?? 150,
+        snmpCommunity: dev.snmpCommunity || 'iub_public',
+        snmpVersion: dev.snmpVersion || 'v2c',
+        fiberCores: dev.fiberCores,
+        prtgSensorId: dev.prtgSensorId || `PRTG-${Math.floor(1000 + Math.random() * 9000)}`,
+        zabbixHostId: dev.zabbixHostId || `ZAB-${Math.floor(1000 + Math.random() * 9000)}`,
+        suricataThreatLevel: dev.suricataThreatLevel || 'safe',
+        notes: dev.notes || 'Imported via CSV/PDF Bulk Provisioning',
+        vlanId: dev.vlanId || 10,
+        deviceNumber: dev.deviceNumber || id,
+        deviceLocation: dev.deviceLocation || `${dev.building || 'Campus Block'}, Room ${dev.roomNo || '101'}`,
+        switchLocation: dev.switchLocation,
+        switchBuilding: dev.switchBuilding,
+        switchRoom: dev.switchRoom,
+        switchModel: dev.switchModel,
+        switchPort: dev.switchPort,
+        devicePort: dev.devicePort,
+        offTime: status === 'offline' ? (dev.offTime || nowIso) : undefined,
+        downtimeDuration: status === 'offline' ? (dev.downtimeDuration || 'Active Downtime') : undefined,
+      };
+
+      const existingIdx = this.data.devices.findIndex((d) => d.id === newDevice.id);
+      if (existingIdx >= 0) {
+        this.data.devices[existingIdx] = newDevice;
+      } else {
+        this.data.devices.unshift(newDevice);
+      }
+      addedDevices.push(newDevice);
+    }
+
+    this.saveDatabase(this.data);
+    return addedDevices;
   }
 
   public updateDevice(id: string, updates: Partial<Device>): Device | null {
@@ -1419,6 +1565,169 @@ class NetworkDatabase {
       return [];
     }
     return history.slice(-limitCount);
+  }
+
+  public getUsers(): AdminUserAccount[] {
+    if (!this.data.users) {
+      this.data.users = [...initialAdminUsers];
+    }
+    return this.data.users;
+  }
+
+  public findUserByEmail(email: string): AdminUserAccount | undefined {
+    return this.getUsers().find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  }
+
+  public deleteUser(id: string): boolean {
+    const users = this.getUsers();
+    const initialLen = users.length;
+    this.data.users = users.filter((u) => u.id !== id);
+    if (this.data.users.length !== initialLen) {
+      this.saveDatabase(this.data);
+      return true;
+    }
+    return false;
+  }
+
+  public updateUserRole(id: string, role: string, roleTitle?: string): AdminUserAccount | null {
+    const users = this.getUsers();
+    const user = users.find((u) => u.id === id);
+    if (!user) return null;
+
+    user.role = role as any;
+    if (roleTitle) {
+      user.roleTitle = roleTitle;
+    } else {
+      if (role === 'Admin') user.roleTitle = 'Chief System & Network Administrator';
+      else if (role === 'Manager') user.roleTitle = 'NOC Operations Manager';
+      else if (role === 'User') user.roleTitle = 'Campus Staff & Network Viewer';
+    }
+
+    this.saveDatabase(this.data);
+    return user;
+  }
+
+  // 2FA OTP Verification Storage & Lifecycle
+  private pendingOtps: Map<string, {
+    email: string;
+    otp: string;
+    purpose: 'login' | 'signup';
+    userData?: any;
+    createdAt: number;
+    expiresAt: number;
+  }> = new Map();
+
+  public createOtp(email: string, purpose: 'login' | 'signup', userData?: any): { otp: string; expiresAt: number } {
+    const cleanEmail = email.trim().toLowerCase();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const now = Date.now();
+    const expiresAt = now + 10 * 60 * 1000; // 10 minutes
+
+    this.pendingOtps.set(cleanEmail, {
+      email: cleanEmail,
+      otp,
+      purpose,
+      userData,
+      createdAt: now,
+      expiresAt,
+    });
+
+    console.log(`\n======================================================`);
+    console.log(`[IUB 2FA SECURITY] SIMULATED EMAIL TO: ${cleanEmail}`);
+    console.log(`[IUB 2FA SECURITY] PURPOSE: ${purpose.toUpperCase()}`);
+    console.log(`[IUB 2FA SECURITY] 6-DIGIT VERIFICATION CODE: >>> [ ${otp} ] <<<`);
+    console.log(`[IUB 2FA SECURITY] EXPIRES IN 10 MINUTES`);
+    console.log(`======================================================\n`);
+
+    return { otp, expiresAt };
+  }
+
+  public verifyOtp(email: string, otpAttempt: string): { 
+    valid: boolean; 
+    error?: string; 
+    record?: { email: string; otp: string; purpose: 'login' | 'signup'; userData?: any } 
+  } {
+    const cleanEmail = email.trim().toLowerCase();
+    const record = this.pendingOtps.get(cleanEmail);
+    if (!record) {
+      return { valid: false, error: 'No active OTP verification session found. Please request a new code.' };
+    }
+
+    if (Date.now() > record.expiresAt) {
+      this.pendingOtps.delete(cleanEmail);
+      return { valid: false, error: 'Verification code has expired. Please click Resend Code to obtain a new OTP.' };
+    }
+
+    if (record.otp.trim() !== otpAttempt.trim()) {
+      return { valid: false, error: 'Invalid 6-digit verification code. Please check your simulated email and try again.' };
+    }
+
+    this.pendingOtps.delete(cleanEmail);
+    return { valid: true, record };
+  }
+
+  public getPendingOtp(email: string) {
+    return this.pendingOtps.get(email.trim().toLowerCase());
+  }
+
+  public createUser(userData: {
+    fullName: string;
+    email: string;
+    password: string;
+    role?: 'Admin' | 'Manager' | 'User' | 'ai_lead' | 'super_admin' | 'noc_manager' | 'campus_engineer';
+    roleTitle?: string;
+    department?: string;
+    campusAccess?: CampusId | 'ALL';
+    phoneNumber?: string;
+  }): AdminUserAccount {
+    const existing = this.findUserByEmail(userData.email);
+    if (existing) {
+      throw new Error(`An account with email ${userData.email} already exists.`);
+    }
+
+    const role = userData.role || 'User';
+    const roleTitles: Record<string, string> = {
+      Admin: 'Chief System & Network Administrator',
+      Manager: 'NOC Operations Manager',
+      User: 'Campus Staff & Network Viewer',
+      ai_lead: 'AI Lead Engineer & NOC System Architect',
+      super_admin: 'Chief Network Operations Super Admin',
+      noc_manager: 'NOC Operations Manager',
+      campus_engineer: 'Campus Network Engineer & Field Specialist',
+    };
+
+    const newUser: AdminUserAccount = {
+      id: `USER-${Date.now().toString().slice(-6)}`,
+      fullName: userData.fullName.trim(),
+      email: userData.email.trim().toLowerCase(),
+      passwordHash: userData.password,
+      role,
+      roleTitle: userData.roleTitle || roleTitles[role] || (role === 'Admin' ? 'Admin' : role === 'Manager' ? 'Manager' : 'User'),
+      department: userData.department || 'Directorate of Information Technology (DIT)',
+      campusAccess: userData.campusAccess || 'ALL',
+      phoneNumber: userData.phoneNumber,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      twoFactorVerified: true,
+    };
+
+    if (!this.data.users) {
+      this.data.users = [...initialAdminUsers];
+    }
+    this.data.users.push(newUser);
+    this.saveDatabase(this.data);
+    return newUser;
+  }
+
+  public verifyUser(email: string, passwordAttempt: string): AdminUserAccount | null {
+    const user = this.findUserByEmail(email);
+    if (!user) return null;
+    if (user.passwordHash === passwordAttempt) {
+      user.lastLogin = new Date().toISOString();
+      this.saveDatabase(this.data);
+      return user;
+    }
+    return null;
   }
 
   public resetToDefaults() {

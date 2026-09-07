@@ -17,7 +17,9 @@ import {
   FileSpreadsheet,
   Network,
   Activity,
-  Check
+  Check,
+  UploadCloud,
+  FileText
 } from 'lucide-react';
 import { Device, CampusId } from '../types.ts';
 
@@ -31,6 +33,8 @@ interface DeviceTableProps {
   onOpenSheetsModal: () => void;
   onViewHistory?: (device: Device) => void;
   onOpenCollectorModal?: () => void;
+  onOpenImportModal?: () => void;
+  onOpenPdfExportModal?: () => void;
 }
 
 export const DeviceTable: React.FC<DeviceTableProps> = ({
@@ -43,6 +47,8 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
   onOpenSheetsModal,
   onViewHistory,
   onOpenCollectorModal,
+  onOpenImportModal,
+  onOpenPdfExportModal,
 }) => {
   const [sortField, setSortField] = useState<keyof Device>('campus');
   const [sortAsc, setSortAsc] = useState(true);
@@ -217,6 +223,28 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
             <span>Connect Google Sheets</span>
           </button>
 
+          {onOpenImportModal && (
+            <button
+              onClick={onOpenImportModal}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 text-xs font-semibold border border-emerald-500/40 shadow-sm transition cursor-pointer"
+              title="Bulk import equipment and IP addresses from CSV or PDF file"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Import CSV / PDF</span>
+            </button>
+          )}
+
+          {onOpenPdfExportModal && (
+            <button
+              onClick={onOpenPdfExportModal}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-red-950/50 hover:bg-red-900/70 text-red-300 text-xs font-medium border border-red-500/30 transition cursor-pointer"
+              title="Generate and download official PDF audit report"
+            >
+              <FileText className="w-3.5 h-3.5 text-red-400" />
+              <span>Export PDF</span>
+            </button>
+          )}
+
           <button
             id="export-to-csv-btn"
             onClick={handleExportToCSV}
@@ -228,7 +256,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
             ) : (
               <Download className="w-3.5 h-3.5 text-blue-400" />
             )}
-            <span>{exported ? 'Exported to CSV!' : 'Export to CSV'}</span>
+            <span>{exported ? 'Exported to CSV!' : 'Export CSV'}</span>
           </button>
 
           <button

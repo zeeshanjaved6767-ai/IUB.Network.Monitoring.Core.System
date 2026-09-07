@@ -53,7 +53,19 @@ async function startServer() {
     next();
   });
 
-  app.use(express.json());
+  // Increase body parser limit to 50mb for bulk equipment CSV/PDF imports
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  // Graceful body-parser error handler for oversized payloads
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+      return res.status(413).json({
+        error: 'Payload too large: The uploaded file or device batch exceeds the allowed size limit.',
+      });
+    }
+    next(err);
+  });
 
   // Background Telemetry Simulator: periodically updates slight bandwidth and ping variations
   setInterval(() => {
@@ -264,6 +276,294 @@ async function startServer() {
       res.status(201).json(device);
     } catch (err: any) {
       res.status(400).json({ error: err.message || 'Failed to add device' });
+    }
+  });
+
+  // Bulk Device Provisioning (CSV/PDF Import)
+  app.post('/api/devices/bulk', (req, res) => {
+    try {
+      const rawDevices = req.body.devices;
+      if (!Array.isArray(rawDevices) || rawDevices.length === 0) {
+        return res.status(400).json({ error: 'devices array is required and cannot be empty' });
+      }
+
+      const addedDevices = db.addDevicesBulk(rawDevices);
+      // Broadcast bulk additions to all connected WebSocket clients
+      for (const dev of addedDevices) {
+        broadcastDeviceCreated(dev);
+      }
+
+      res.status(201).json({
+        success: true,
+        message: `Successfully provisioned and registered ${addedDevices.length} equipment in IUB database.`,
+        count: addedDevices.length,
+        devices: addedDevices,
+      });
+    } catch (err: any) {
+      console.error('Error in bulk device provisioning:', err);
+      res.status(500).json({ error: err.message || 'Failed to bulk provision devices' });
+    }
+  });
+
+  // --- 2FA Authentication, OTP Lifecycle & Session Management ---
+
+  // Request 6-digit OTP for either Login or Sign-up
+  app.post('/api/auth/request-otp', (req, res) => {
+    try {
+      const { purpose, email, password, fullName, role, department, campusAccess, phoneNumber } = req.body;
+      if (!email || !purpose) {
+        return res.status(400).json({ error: 'Email and purpose (login or signup) are required.' });
+      }
+
+      const cleanEmail = String(email).trim().toLowerCase();
+
+      if (purpose === 'login') {
+        if (!password) {
+          return res.status(400).json({ error: 'Password is required to request login OTP.' });
+        }
+        const user = db.verifyUser(cleanEmail, password);
+        if (!user) {
+          return res.status(401).json({ error: 'Invalid email or password. Please verify your credentials.' });
+        }
+        const { otp, expiresAt } = db.createOtp(cleanEmail, 'login');
+        return res.json({
+          success: true,
+          message: `6-digit 2FA verification code dispatched to ${cleanEmail}.`,
+          email: cleanEmail,
+          purpose: 'login',
+          simulatedOtp: otp,
+          expiresAt,
+        });
+      } else if (purpose === 'signup') {
+        if (!fullName || !password) {
+          return res.status(400).json({ error: 'Full Name and Password are required.' });
+        }
+        if (password.length < 6) {
+          return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+        }
+        const existing = db.findUserByEmail(cleanEmail);
+        if (existing) {
+          return res.status(400).json({ error: `An account with email ${cleanEmail} already exists. Please log in.` });
+        }
+
+        const { otp, expiresAt } = db.createOtp(cleanEmail, 'signup', {
+          fullName,
+          email: cleanEmail,
+          password,
+          role: role || 'User',
+          department,
+          campusAccess,
+          phoneNumber,
+        });
+
+        return res.json({
+          success: true,
+          message: `6-digit 2FA verification code dispatched to ${cleanEmail}.`,
+          email: cleanEmail,
+          purpose: 'signup',
+          simulatedOtp: otp,
+          expiresAt,
+        });
+      } else {
+        return res.status(400).json({ error: 'Invalid purpose specified.' });
+      }
+    } catch (err: any) {
+      console.error('Error in request-otp:', err);
+      res.status(500).json({ error: err.message || 'Failed to process 2FA OTP request' });
+    }
+  });
+
+  // Verify 6-digit OTP code and complete Login or Sign-up
+  app.post('/api/auth/verify-otp', (req, res) => {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) {
+        return res.status(400).json({ error: 'Email and 6-digit OTP are required.' });
+      }
+
+      const cleanEmail = String(email).trim().toLowerCase();
+      const verification = db.verifyOtp(cleanEmail, String(otp).trim());
+
+      if (!verification.valid || !verification.record) {
+        return res.status(400).json({ error: verification.error || 'Invalid verification code.' });
+      }
+
+      const { purpose, userData } = verification.record;
+
+      if (purpose === 'signup') {
+        if (!userData) {
+          return res.status(400).json({ error: 'Missing registration details in OTP session.' });
+        }
+        const newUser = db.createUser(userData);
+        const { passwordHash, ...sanitized } = newUser;
+        return res.status(201).json({
+          success: true,
+          message: `Identity verified! Welcome to IUB Core NOC, ${sanitized.fullName}.`,
+          user: sanitized,
+          token: `iub-auth-${sanitized.id}-${Date.now()}`,
+        });
+      } else {
+        // Login flow
+        const user = db.findUserByEmail(cleanEmail);
+        if (!user) {
+          return res.status(404).json({ error: 'User account not found.' });
+        }
+        user.lastLogin = new Date().toISOString();
+        const { passwordHash, ...sanitized } = user;
+        return res.json({
+          success: true,
+          message: `Identity verified! Welcome back, ${sanitized.fullName}.`,
+          user: sanitized,
+          token: `iub-auth-${sanitized.id}-${Date.now()}`,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error in verify-otp:', err);
+      res.status(500).json({ error: err.message || 'OTP verification failed' });
+    }
+  });
+
+  // Resend 6-digit OTP
+  app.post('/api/auth/resend-otp', (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required to resend OTP.' });
+      }
+      const cleanEmail = String(email).trim().toLowerCase();
+      const existingRecord = db.getPendingOtp(cleanEmail);
+      
+      const purpose = existingRecord?.purpose || 'login';
+      const userData = existingRecord?.userData;
+
+      const { otp, expiresAt } = db.createOtp(cleanEmail, purpose, userData);
+      return res.json({
+        success: true,
+        message: `A fresh 6-digit verification code has been dispatched to ${cleanEmail}.`,
+        email: cleanEmail,
+        simulatedOtp: otp,
+        expiresAt,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to resend verification code' });
+    }
+  });
+
+  // Direct login (fallback if 2FA skipped or verified)
+  app.post('/api/auth/login', (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      const user = db.verifyUser(email, password);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid credentials. Please verify your email and password.' });
+      }
+
+      const { passwordHash, ...sanitized } = user;
+      res.json({
+        success: true,
+        message: `Welcome back, ${sanitized.fullName}! Authenticated as ${sanitized.roleTitle}.`,
+        user: sanitized,
+        token: `iub-auth-${sanitized.id}-${Date.now()}`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Authentication failed' });
+    }
+  });
+
+  // Direct signup (fallback)
+  app.post('/api/auth/signup', (req, res) => {
+    try {
+      const { fullName, email, password, role, department, campusAccess, phoneNumber } = req.body;
+      if (!fullName || !email || !password) {
+        return res.status(400).json({ error: 'Full Name, Email, and Password are required.' });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+      }
+
+      const newUser = db.createUser({
+        fullName,
+        email,
+        password,
+        role,
+        department,
+        campusAccess,
+        phoneNumber,
+      });
+
+      const { passwordHash, ...sanitized } = newUser;
+      res.status(201).json({
+        success: true,
+        message: `Account registered successfully for ${sanitized.fullName}.`,
+        user: sanitized,
+        token: `iub-auth-${sanitized.id}-${Date.now()}`,
+      });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Sign up failed' });
+    }
+  });
+
+  app.get('/api/auth/me', (req, res) => {
+    const users = db.getUsers();
+    // Return primary AI Lead Engineer account as default session state
+    const primary = users[0] || {
+      id: 'ADMIN-ZEESHAN-01',
+      fullName: 'Mr. Zeeshan Javed',
+      email: 'zeejaved766@gmail.com',
+      role: 'Admin',
+      roleTitle: 'AI Lead Engineer & NOC System Architect',
+      department: 'Directorate of Information Technology (DIT)',
+      campusAccess: 'ALL',
+      phoneNumber: '+92 300 1234567',
+      createdAt: new Date().toISOString(),
+      twoFactorVerified: true,
+    };
+    const { passwordHash, ...sanitized } = primary as any;
+    res.json(sanitized);
+  });
+
+  // Get user list for Admin panel
+  app.get('/api/auth/users', (req, res) => {
+    const users = db.getUsers().map((u) => {
+      const { passwordHash, ...sanitized } = u;
+      return sanitized;
+    });
+    res.json(users);
+  });
+
+  // Update user role (Admin Panel action)
+  app.patch('/api/auth/users/:id/role', (req, res) => {
+    try {
+      const { role, roleTitle } = req.body;
+      if (!role) {
+        return res.status(400).json({ error: 'role is required' });
+      }
+      const updated = db.updateUserRole(req.params.id, role, roleTitle);
+      if (!updated) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const { passwordHash, ...sanitized } = updated;
+      res.json({ success: true, message: `User role updated to ${role}`, user: sanitized });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update user role' });
+    }
+  });
+
+  // Delete user (Admin Panel action)
+  app.delete('/api/auth/users/:id', (req, res) => {
+    try {
+      const success = db.deleteUser(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      res.json({ success: true, message: 'User account removed successfully' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to delete user' });
     }
   });
 

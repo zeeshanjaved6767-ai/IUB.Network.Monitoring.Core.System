@@ -19,6 +19,9 @@ import { NetworkTopology } from './components/NetworkTopology.tsx';
 import { HardwareHealth } from './components/HardwareHealth.tsx';
 import { CampusCircularGraphic } from './components/CampusCircularGraphic.tsx';
 import { ThemeModal } from './components/ThemeModal.tsx';
+import { CsvPdfImportModal } from './components/CsvPdfImportModal.tsx';
+import { PdfExportModal } from './components/PdfExportModal.tsx';
+import { AdminAuthModal } from './components/AdminAuthModal.tsx';
 import { useWebSocket } from './useWebSocket.ts';
 
 import { 
@@ -32,7 +35,9 @@ import {
   AlertNotification, 
   AlertRule,
   SystemEngineMetrics,
-  ThemeConfig 
+  ThemeConfig,
+  AdminUser,
+  getUserRoleCategory
 } from './types.ts';
 import { DEFAULT_THEME, applyThemeToDocument } from './themes.ts';
 
@@ -58,7 +63,26 @@ import {
   resetDatabase
 } from './api.ts';
 
-import { CheckCircle2, RotateCcw, Plus, Terminal, Radio, AlertTriangle, Bot, Sparkles, Server, Activity, Download, Users, Network, Palette } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  RotateCcw, 
+  Plus, 
+  Terminal, 
+  Radio, 
+  AlertTriangle, 
+  Bot, 
+  Sparkles, 
+  Server, 
+  Activity, 
+  Download, 
+  Users, 
+  Network, 
+  Palette,
+  ShieldCheck,
+  Lock,
+  ChevronRight,
+  KeyRound
+} from 'lucide-react';
 
 export default function App() {
   const [campuses, setCampuses] = useState<CampusInfo[]>(() => {
@@ -99,6 +123,27 @@ export default function App() {
   const [chatbotInitialPrompt, setChatbotInitialPrompt] = useState<string | undefined>(undefined);
   const [isWhatsAppGroupModalOpen, setIsWhatsAppGroupModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState(false);
+  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState(false);
+
+  // Admin User Authentication session
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('iub_current_admin_user');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      id: 'ADMIN-ZEESHAN-01',
+      fullName: 'Mr. Zeeshan Javed',
+      email: 'zeejaved766@gmail.com',
+      role: 'ai_lead',
+      roleTitle: 'AI Lead Engineer & NOC System Architect',
+      department: 'Directorate of Information Technology (DIT)',
+      campusAccess: 'ALL',
+      phoneNumber: '+92 300 1234567',
+    };
+  });
 
   const handleOpenChatWithQuery = (prompt: string) => {
     setChatbotInitialPrompt(prompt);
@@ -426,6 +471,8 @@ export default function App() {
         onSelectAlertTab={() => setActiveTab('alerts')}
         theme={theme}
         onOpenThemeModal={() => setIsThemeModalOpen(true)}
+        currentUser={currentUser}
+        onOpenAdminAuthModal={() => setIsAdminAuthModalOpen(true)}
       />
 
       {/* Global Navigation and Campus Selector */}
@@ -470,6 +517,86 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* Role-Based Dashboard Access Ribbon */}
+        {currentUser && (() => {
+          const roleCategory = getUserRoleCategory(currentUser.role);
+          const isAdmin = roleCategory === 'Admin';
+          const isManager = roleCategory === 'Manager';
+
+          return (
+            <div className={`p-3.5 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-md ${
+              isAdmin 
+                ? 'bg-gradient-to-r from-emerald-950/60 via-[#131F19] to-[#12141A] border-emerald-500/40 shadow-emerald-950/20'
+                : isManager
+                ? 'bg-gradient-to-r from-blue-950/60 via-[#131B26] to-[#12141A] border-blue-500/40 shadow-blue-950/20'
+                : 'bg-gradient-to-r from-amber-950/60 via-[#211A13] to-[#12141A] border-amber-500/40 shadow-amber-950/20'
+            }`}>
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-xl border flex items-center justify-center ${
+                  isAdmin 
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                    : isManager
+                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                    : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                }`}>
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-white text-sm">
+                      {currentUser.fullName}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                      isAdmin
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : isManager
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}>
+                      {roleCategory === 'Admin' ? '🛡️ Admin' : roleCategory === 'Manager' ? '⚡ Manager' : '👤 User'}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#101216] border border-[#2D3139] text-gray-400">
+                      2FA Verified
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {isAdmin && 'Super Admin privileges unlocked: Full network orchestration + User Management Directory.'}
+                    {isManager && 'NOC Operations Manager role: Diagnostic consoles, alarms dispatch & device management.'}
+                    {roleCategory === 'User' && 'Standard User role: Real-time multi-campus telemetry monitoring & device inspection.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 self-end sm:self-center shrink-0">
+                {isAdmin ? (
+                  <button
+                    onClick={() => setIsAdminAuthModalOpen(true)}
+                    className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Admin Panel (User Directory) &rarr;</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAdminAuthModalOpen(true)}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#1E2229] hover:bg-[#282D37] border border-[#2D3139] text-gray-300 hover:text-white font-medium text-xs transition cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    <span>Role & 2FA Info</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsAdminAuthModalOpen(true)}
+                  className="px-2.5 py-1.5 rounded-xl bg-[#12141A] hover:bg-[#1E2229] border border-[#2D3139] text-gray-400 hover:text-gray-200 text-[11px] transition cursor-pointer"
+                  title="Switch or sign into another account"
+                >
+                  Switch User
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Real-Time Status Notification Banner (if any devices offline) */}
         {offlineDevicesCount > 0 && activeTab !== 'alerts' && (
@@ -676,6 +803,8 @@ export default function App() {
               onOpenSheetsModal={() => setIsSheetsModalOpen(true)}
               onViewHistory={(d) => setHistoryDevice(d)}
               onOpenCollectorModal={() => setIsCollectorModalOpen(true)}
+              onOpenImportModal={() => setIsImportModalOpen(true)}
+              onOpenPdfExportModal={() => setIsPdfExportModalOpen(true)}
             />
           </div>
         )}
@@ -910,6 +1039,39 @@ export default function App() {
         devices={devices}
         onToggleDevicePower={handleTogglePower}
         onAlertDispatched={() => loadAllData(true)}
+      />
+
+      {/* CSV & PDF Automatic Equipment Provisioner Modal */}
+      <CsvPdfImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportSuccess={(importedCount) => {
+          loadAllData(true);
+          showToast(`Successfully imported and provisioned ${importedCount} equipment into IUB database!`, 'success');
+        }}
+      />
+
+      {/* Official PDF Telemetry & Inventory Report Exporter Modal */}
+      <PdfExportModal
+        isOpen={isPdfExportModalOpen}
+        onClose={() => setIsPdfExportModalOpen(false)}
+        devices={devices}
+        campuses={campuses}
+        defaultCampus={selectedCampus}
+      />
+
+      {/* Admin Sign Up & Login Authentication Modal */}
+      <AdminAuthModal
+        isOpen={isAdminAuthModalOpen}
+        onClose={() => setIsAdminAuthModalOpen(false)}
+        currentUser={currentUser}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          try {
+            localStorage.setItem('iub_current_admin_user', JSON.stringify(user));
+          } catch {}
+          showToast(`Authenticated successfully as ${user.fullName} (${user.roleTitle})`, 'success');
+        }}
       />
 
     </div>

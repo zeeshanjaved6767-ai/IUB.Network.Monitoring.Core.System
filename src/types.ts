@@ -58,6 +58,7 @@ export interface Device {
   deviceLocation?: string;
   switchLocation?: string;
   switchBuilding?: string;
+  switchRoom?: string;
   switchModel?: string;
   switchPort?: string;
   devicePort?: string;
@@ -251,4 +252,39 @@ export interface ThemeConfig {
   accentColor?: string;
   textColor?: string;
   isLightMode?: boolean;
+}
+
+export type UserRole = 'Admin' | 'Manager' | 'User';
+export type AdminRole = 'Admin' | 'Manager' | 'User' | 'ai_lead' | 'super_admin' | 'noc_manager' | 'campus_engineer';
+
+export interface AdminUser {
+  id: string;
+  fullName: string;
+  email: string;
+  role: AdminRole;
+  roleTitle: string;
+  department: string;
+  campusAccess: CampusId | 'ALL';
+  phoneNumber?: string;
+  avatarUrl?: string;
+  createdAt: string;
+  lastLogin?: string;
+  twoFactorVerified?: boolean;
+}
+
+export function getUserRoleCategory(role?: string): 'Admin' | 'Manager' | 'User' {
+  if (!role) return 'User';
+  const r = role.toLowerCase();
+  if (r.includes('admin') || r.includes('lead')) return 'Admin';
+  if (r.includes('manager')) return 'Manager';
+  return 'User';
+}
+
+export interface CsvParsedRow {
+  rowNumber: number;
+  raw: Record<string, string>;
+  device: Partial<Device>;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
 }

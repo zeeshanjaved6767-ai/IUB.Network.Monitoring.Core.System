@@ -17,7 +17,7 @@ import {
   Users,
   Palette
 } from 'lucide-react';
-import { SystemEngineMetrics, ThemeConfig } from '../types.ts';
+import { SystemEngineMetrics, ThemeConfig, AdminUser } from '../types.ts';
 
 interface HeaderProps {
   metrics?: SystemEngineMetrics | null;
@@ -33,6 +33,8 @@ interface HeaderProps {
   onSelectAlertTab: () => void;
   theme?: ThemeConfig;
   onOpenThemeModal?: () => void;
+  currentUser?: AdminUser | null;
+  onOpenAdminAuthModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -49,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectAlertTab,
   theme,
   onOpenThemeModal,
+  currentUser,
+  onOpenAdminAuthModal,
 }) => {
   const [time, setTime] = useState(new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi' }));
 
@@ -215,6 +219,54 @@ export const Header: React.FC<HeaderProps> = ({
                     {offlineCount}
                   </span>
                 )}
+              </button>
+            )}
+
+            {/* 2FA Authenticated User & Access Control Button */}
+            {onOpenAdminAuthModal && (
+              <button
+                id="header-admin-auth-btn"
+                onClick={onOpenAdminAuthModal}
+                className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition cursor-pointer group ${
+                  (currentUser?.role || '').toLowerCase().includes('admin') || (currentUser?.role || '').toLowerCase().includes('lead')
+                    ? 'bg-emerald-950/40 hover:bg-emerald-900/60 border-emerald-500/40 text-emerald-300'
+                    : (currentUser?.role || '').toLowerCase().includes('manager')
+                    ? 'bg-blue-950/40 hover:bg-blue-900/60 border-blue-500/40 text-blue-300'
+                    : 'bg-amber-950/40 hover:bg-amber-900/60 border-amber-500/40 text-amber-300'
+                }`}
+                title={currentUser ? `Logged in: ${currentUser.fullName} (${currentUser.roleTitle || currentUser.role}) - Click for 2FA Role Dashboard & Admin Panel` : '2FA Sign In / Sign Up'}
+              >
+                <div className="relative">
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold ${
+                    (currentUser?.role || '').toLowerCase().includes('admin') || (currentUser?.role || '').toLowerCase().includes('lead')
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+                      : (currentUser?.role || '').toLowerCase().includes('manager')
+                      ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
+                  }`}>
+                    {currentUser?.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-[#12141A]"></span>
+                </div>
+                <div className="text-left hidden sm:block">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-white leading-tight">
+                      {currentUser?.fullName || 'Sign In / 2FA'}
+                    </span>
+                    <span className={`text-[9px] font-mono px-1 rounded uppercase font-bold ${
+                      (currentUser?.role || '').toLowerCase().includes('admin') || (currentUser?.role || '').toLowerCase().includes('lead')
+                        ? 'bg-emerald-500/30 text-emerald-300'
+                        : (currentUser?.role || '').toLowerCase().includes('manager')
+                        ? 'bg-blue-500/30 text-blue-300'
+                        : 'bg-amber-500/30 text-amber-300'
+                    }`}>
+                      {(currentUser?.role || '').toLowerCase().includes('admin') || (currentUser?.role || '').toLowerCase().includes('lead') ? 'Admin' : (currentUser?.role || '').toLowerCase().includes('manager') ? 'Manager' : 'User'}
+                    </span>
+                  </div>
+                  <span className="block text-[9px] text-gray-400 font-mono leading-tight">
+                    2FA Verified &bull; Access Gate
+                  </span>
+                </div>
               </button>
             )}
 
